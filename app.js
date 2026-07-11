@@ -143,10 +143,12 @@ function stopRecording() {
 }
 function finishRecording() {
   lastBlob = new Blob(chunks, { type: chunks[0] ? chunks[0].type : 'video/mp4' });
+  // ignore accidental taps (too-short clip) — just go back to the camera
+  if (Date.now() - recStart < 500 || lastBlob.size < 2000) { lastBlob = null; return; }
   els.resultVideo.src = URL.createObjectURL(lastBlob);
   els.resultVideo.hidden = false;
   els.resultImage.hidden = true;
-  els.result.hidden = false;
+  els.result.classList.add('open');
   sheetOpen = true;
 }
 
@@ -159,13 +161,13 @@ function capturePhoto() {
     els.resultImage.src = URL.createObjectURL(blob);
     els.resultImage.hidden = false;
     els.resultVideo.hidden = true;
-    els.result.hidden = false;
+    els.result.classList.add('open');
     sheetOpen = true;
   }, 'image/jpeg', 0.92);
 }
 
 function closeSheet() {
-  els.result.hidden = true;
+  els.result.classList.remove('open');
   els.resultVideo.pause();
   els.resultVideo.removeAttribute('src');
   els.resultVideo.load();
@@ -216,8 +218,8 @@ els.stamp.onclick = () => {
 els.intensity.oninput = e => { intensity = +e.target.value; };
 els.save.onclick = saveClip;
 els.discard.onclick = closeSheet;
-// tap the dark backdrop (outside the video/buttons) to go back to the camera
-els.result.onclick = e => { if (e.target === els.result) closeSheet(); };
+// tap anywhere except the Save/Retake buttons to go back to the camera
+els.result.onclick = e => { if (!e.target.closest('.sheet-actions')) closeSheet(); };
 
 // ---------------------------------------------------------------- boot
 (async function boot() {

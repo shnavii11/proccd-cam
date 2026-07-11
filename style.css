@@ -77,10 +77,11 @@ main {
 
 /* post-record sheet */
 .sheet {
-  position: fixed; inset: 0; background: #000d; backdrop-filter: blur(6px);
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  position: fixed; inset: 0; background: #000e; backdrop-filter: blur(6px);
+  display: none; flex-direction: column; align-items: center; justify-content: center;
   gap: 16px; padding: 20px; z-index: 10;
 }
+.sheet.open { display: flex; }   /* class-based, so hiding is rock-solid */
 .sheet video, .sheet img { max-width: 100%; max-height: 72dvh; border-radius: 14px; background: #000; }
 .sheet-actions { display: flex; gap: 14px; }
 .hint { color: #888; font-size: 12px; margin: 2px 0 0; }
