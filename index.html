@@ -59,9 +59,27 @@
     <img id="resultImage" alt="captured photo" hidden />
     <div class="sheet-actions">
       <button id="discard" class="chip">Retake</button>
+      <button id="decorate" class="chip">✨ Decorate</button>
       <button id="save" class="rec-save">Save ▾</button>
     </div>
     <p class="hint">tap the preview (or anywhere) to go back to the camera</p>
+  </div>
+
+  <!-- decorate editor: photo on a card + stickers -->
+  <div id="editor">
+    <div class="ed-bar">
+      <button id="edBack" class="chip">←</button>
+      <span class="ed-title">decorate ✨</span>
+      <button id="edSave" class="rec-save">Save ▾</button>
+    </div>
+    <div id="edWrap"><div id="stage"></div></div>
+    <div class="ed-tabs">
+      <button id="tabStk" class="ed-tab active">✨ stickers</button>
+      <button id="tabBg" class="ed-tab">🎨 background</button>
+    </div>
+    <div id="trayStk" class="ed-tray"></div>
+    <div id="trayBg" class="ed-tray" hidden></div>
+    <p class="hint">drag to move · pinch or ⤢ to resize &amp; rotate · ✕ to remove</p>
   </div>
 
   <script type="module" src="./app.js"></script>

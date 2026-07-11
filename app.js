@@ -1,6 +1,7 @@
 // ProCCD Cam — camera capture, live filtered preview, recording, save/share.
 import { PARAMS, scaleParams } from './params.js';
 import { ProCCDFilter } from './filter.js';
+import { initEditor, openEditor } from './editor.js';
 
 const video   = document.getElementById('cam');        // hidden <video> (camera feed)
 const glCanvas = document.getElementById('gl');        // hidden WebGL output
@@ -27,6 +28,7 @@ const els = {
   bgPanel: document.getElementById('bgPanel'),
   count:  document.getElementById('count'),
   flash:  document.getElementById('flash'),
+  decorate: document.getElementById('decorate'),
 };
 
 // selectable UI backgrounds
@@ -51,6 +53,7 @@ let intensity = 1.0;
 let sheetOpen = false;   // is the post-capture preview covering the camera?
 let mode = 'video';      // 'video' | 'photo' | 'booth'
 let boothRunning = false;
+let curBg = 0;           // currently selected UI background index
 
 let recorder = null, chunks = [], recStart = 0, recTimer = null, lastBlob = null, lastExt = 'mp4';
 
@@ -172,6 +175,7 @@ function finishRecording() {
   els.resultVideo.src = URL.createObjectURL(lastBlob);
   els.resultVideo.hidden = false;
   els.resultImage.hidden = true;
+  els.decorate.hidden = true;            // decorate is photos/strips only
   els.result.classList.add('open');
   sheetOpen = true;
 }
@@ -184,6 +188,7 @@ function showResultImage(blob) {
   els.resultImage.src = URL.createObjectURL(blob);
   els.resultImage.hidden = false;
   els.resultVideo.hidden = true;
+  els.decorate.hidden = false;           // photos & booth strips can be decorated
   els.result.classList.add('open');
   sheetOpen = true;
 }
@@ -253,10 +258,11 @@ async function runBooth() {
 // ---- selectable UI backgrounds (persisted in localStorage) ----
 function setBackground(i) {
   const bg = BGS[i] || BGS[0];
+  curBg = (i >= 0 && i < BGS.length) ? i : 0;
   document.body.style.background =
     `linear-gradient(rgba(8,10,24,.34), rgba(8,10,24,.34)), url('${bg.f}') center / cover no-repeat`;
-  localStorage.setItem('proccd_bg', i);
-  [...els.bgPanel.children].forEach((b, idx) => b.classList.toggle('active', idx === i));
+  localStorage.setItem('proccd_bg', curBg);
+  [...els.bgPanel.children].forEach((b, idx) => b.classList.toggle('active', idx === curBg));
 }
 function buildBgPanel() {
   BGS.forEach((bg, i) => {
@@ -291,15 +297,24 @@ function setMode(m) {
   els.record.classList.toggle('photo', m !== 'video');   // white shutter for photo & booth
   els.mute.style.visibility = m === 'video' ? 'visible' : 'hidden';
 }
-async function saveClip() {
-  const name = `proccd_${stampText().replace(/[^0-9]/g, '')}.${lastExt}`;
-  const file = new File([lastBlob], name, { type: lastBlob.type });
+// share to Photos (iOS share sheet) or download — reused by clips, photos, decorated cards
+async function shareOrDownload(blob, ext) {
+  const name = `proccd_${stampText().replace(/[^0-9]/g, '')}.${ext}`;
+  const file = new File([blob], name, { type: blob.type });
   if (navigator.canShare && navigator.canShare({ files: [file] })) {
-    try { await navigator.share({ files: [file], title: 'ProCCD clip' }); return; }
+    try { await navigator.share({ files: [file], title: 'ProCCD' }); return; }
     catch (e) { if (e.name === 'AbortError') return; }
   }
   const a = document.createElement('a');
   a.href = URL.createObjectURL(file); a.download = name; a.click();
+}
+function saveClip() { if (lastBlob) shareOrDownload(lastBlob, lastExt); }
+
+// open the decorate editor on the current photo/strip; hide the sheet meanwhile
+function openDecorate() {
+  if (!lastBlob) return;
+  els.result.classList.remove('open');     // reveal the editor (camera stays paused)
+  openEditor(lastBlob, { onBack: () => els.result.classList.add('open') });
 }
 
 // ---------------------------------------------------------------- UI wiring
@@ -327,6 +342,7 @@ els.stamp.onclick = () => {
 };
 els.intensity.oninput = e => { intensity = +e.target.value; };
 els.save.onclick = saveClip;
+els.decorate.onclick = openDecorate;
 els.discard.onclick = closeSheet;
 // tap anywhere except the Save/Retake buttons to go back to the camera
 els.result.onclick = e => { if (!e.target.closest('.sheet-actions')) closeSheet(); };
@@ -340,6 +356,7 @@ els.result.onclick = e => { if (!e.target.closest('.sheet-actions')) closeSheet(
     return;
   }
   buildBgPanel();
+  initEditor({ bgs: BGS, getBgIndex: () => curBg, shareBlob: shareOrDownload });
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
     els.status.textContent = 'This browser has no camera API. Open in Safari or Chrome over https.';
     return;
