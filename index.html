@@ -19,6 +19,12 @@
   <canvas id="gl"></canvas>
 
   <main>
+    <!-- mode switch -->
+    <div class="modebar">
+      <button id="modePhoto" class="mode">Photo</button>
+      <button id="modeVideo" class="mode active">Video</button>
+    </div>
+
     <!-- the visible, recorded surface -->
     <canvas id="view"></canvas>
     <div id="timer" hidden>● 00:00</div>
@@ -38,11 +44,12 @@
     </div>
   </main>
 
-  <!-- post-record preview -->
+  <!-- post-capture preview (photo or video) -->
   <div id="result" class="sheet" hidden>
-    <video id="resultVideo" controls playsinline></video>
+    <video id="resultVideo" controls playsinline hidden></video>
+    <img id="resultImage" alt="captured photo" hidden />
     <div class="sheet-actions">
-      <button id="discard" class="chip">Discard</button>
+      <button id="discard" class="chip">Retake</button>
       <button id="save" class="rec-save">Save ▾</button>
     </div>
     <p class="hint">tap outside to go back to the camera</p>

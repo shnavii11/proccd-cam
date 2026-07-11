@@ -17,8 +17,11 @@ const els = {
   status: document.getElementById('status'),
   result: document.getElementById('result'),
   resultVideo: document.getElementById('resultVideo'),
+  resultImage: document.getElementById('resultImage'),
   save:   document.getElementById('save'),
   discard: document.getElementById('discard'),
+  modePhoto: document.getElementById('modePhoto'),
+  modeVideo: document.getElementById('modeVideo'),
 };
 
 let filter;
@@ -28,7 +31,8 @@ let mirror = false;           // mirror front camera
 let stampOn = true;
 let muted = false;
 let intensity = 1.0;
-let sheetOpen = false;   // is the post-record preview covering the camera?
+let sheetOpen = false;   // is the post-capture preview covering the camera?
+let mode = 'video';      // 'video' | 'photo'
 
 let recorder = null, chunks = [], recStart = 0, recTimer = null, lastBlob = null, lastExt = 'mp4';
 
@@ -122,6 +126,8 @@ function startRecording() {
   recorder.start();
   recStart = Date.now();
   els.record.classList.add('recording');
+  view.classList.add('rec-on');           // obvious red border while filming
+  els.timer.textContent = '● 00:00';
   els.timer.hidden = false;
   recTimer = setInterval(() => {
     const s = Math.floor((Date.now() - recStart) / 1000);
@@ -132,21 +138,49 @@ function stopRecording() {
   if (recorder && recorder.state !== 'inactive') recorder.stop();
   clearInterval(recTimer);
   els.record.classList.remove('recording');
+  view.classList.remove('rec-on');
   els.timer.hidden = true;
 }
 function finishRecording() {
   lastBlob = new Blob(chunks, { type: chunks[0] ? chunks[0].type : 'video/mp4' });
   els.resultVideo.src = URL.createObjectURL(lastBlob);
+  els.resultVideo.hidden = false;
+  els.resultImage.hidden = true;
   els.result.hidden = false;
   sheetOpen = true;
 }
+
+// snap the current filtered frame (stamp included) to a JPEG
+function capturePhoto() {
+  view.toBlob(blob => {
+    if (!blob) return;
+    lastBlob = blob;
+    lastExt = 'jpg';
+    els.resultImage.src = URL.createObjectURL(blob);
+    els.resultImage.hidden = false;
+    els.resultVideo.hidden = true;
+    els.result.hidden = false;
+    sheetOpen = true;
+  }, 'image/jpeg', 0.92);
+}
+
 function closeSheet() {
   els.result.hidden = true;
   els.resultVideo.pause();
   els.resultVideo.removeAttribute('src');
   els.resultVideo.load();
+  els.resultImage.removeAttribute('src');
   lastBlob = null;
   sheetOpen = false;
+}
+
+function setMode(m) {
+  if (recorder && recorder.state === 'recording') stopRecording();
+  mode = m;
+  els.modePhoto.classList.toggle('active', m === 'photo');
+  els.modeVideo.classList.toggle('active', m === 'video');
+  els.record.classList.toggle('photo', m === 'photo');   // white shutter vs red
+  els.mute.style.visibility = m === 'photo' ? 'hidden' : 'visible';
 }
 async function saveClip() {
   const name = `proccd_${stampText().replace(/[^0-9]/g, '')}.${lastExt}`;
@@ -160,8 +194,12 @@ async function saveClip() {
 }
 
 // ---------------------------------------------------------------- UI wiring
-els.record.onclick = () =>
+els.record.onclick = () => {
+  if (mode === 'photo') return capturePhoto();
   (recorder && recorder.state === 'recording') ? stopRecording() : startRecording();
+};
+els.modePhoto.onclick = () => setMode('photo');
+els.modeVideo.onclick = () => setMode('video');
 els.flip.onclick = async () => {
   facing = facing === 'environment' ? 'user' : 'environment';
   await startCamera();
