@@ -5,11 +5,12 @@ html, body {
   font: 15px/1.4 -apple-system, system-ui, sans-serif;
   overflow: hidden; overscroll-behavior: none;
 }
-/* lime-gingham background for the camera UI (dark tint keeps controls legible) */
+/* patterned background for the camera UI (dark tint keeps controls legible).
+   JS overrides this with the user's chosen background from BGS. */
 body {
   background:
     linear-gradient(rgba(8, 10, 24, 0.34), rgba(8, 10, 24, 0.34)),
-    url('./assets/bg.jpg') center / cover no-repeat;
+    url('./assets/bg1.jpg') center / cover no-repeat;
 }
 /* hidden pipeline stages */
 #cam, #gl { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; left: -10px; }
@@ -50,6 +51,30 @@ main {
 
 /* unmistakable "recording" border on the preview */
 #view.rec-on { outline: 3px solid #ff3b30; outline-offset: -3px; }
+
+/* background picker */
+#bgPanel {
+  display: none; gap: 8px; max-width: 100%; overflow-x: auto; padding: 6px 4px;
+  scrollbar-width: none;
+}
+#bgPanel.open { display: flex; }
+#bgPanel::-webkit-scrollbar { display: none; }
+.bg-thumb {
+  flex: 0 0 auto; width: 40px; height: 40px; border-radius: 10px; cursor: pointer;
+  border: 2px solid #ffffff33; background-size: cover; background-position: center;
+}
+.bg-thumb.active { border-color: var(--orange); box-shadow: 0 0 0 2px var(--orange); }
+
+/* photo-booth countdown + capture flash */
+#count {
+  position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+  font-size: 22vh; font-weight: 800; color: #fff; text-shadow: 0 4px 30px #000a;
+  pointer-events: none; z-index: 20;
+}
+#flash {
+  position: fixed; inset: 0; background: #fff; z-index: 21; pointer-events: none;
+}
+#count[hidden], #flash[hidden] { display: none; }
 #status {
   position: fixed; bottom: 14px; left: 12px; right: 12px; text-align: center;
   color: #ffb3b3; font-size: 13px;
@@ -67,6 +92,7 @@ main {
   transition: all .18s ease;
 }
 .rec.recording span { width: 30px; height: 30px; border-radius: 8px; }
+.rec.busy { opacity: .5; pointer-events: none; }   /* during booth countdown */
 
 .chip {
   min-width: 46px; height: 46px; padding: 0 12px; border-radius: 999px;

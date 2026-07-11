@@ -23,6 +23,7 @@
     <div class="modebar">
       <button id="modePhoto" class="mode">Photo</button>
       <button id="modeVideo" class="mode active">Video</button>
+      <button id="modeBooth" class="mode">Booth</button>
     </div>
 
     <!-- the visible, recorded surface -->
@@ -38,11 +39,19 @@
 
     <div class="controls sub">
       <button id="stamp" class="chip label" title="Toggle date/time">🕑 stamp</button>
+      <button id="bgBtn" class="chip label" title="Change background">🎨 bg</button>
       <label class="slider">look
         <input id="intensity" type="range" min="0" max="1" step="0.01" value="1" />
       </label>
     </div>
+
+    <!-- background picker strip (thumbnails injected by app.js) -->
+    <div id="bgPanel"></div>
   </main>
+
+  <!-- photo-booth overlays -->
+  <div id="count" hidden>3</div>
+  <div id="flash" hidden></div>
 
   <!-- post-capture preview (photo or video) -->
   <div id="result" class="sheet">

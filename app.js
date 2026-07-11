@@ -22,7 +22,24 @@ const els = {
   discard: document.getElementById('discard'),
   modePhoto: document.getElementById('modePhoto'),
   modeVideo: document.getElementById('modeVideo'),
+  modeBooth: document.getElementById('modeBooth'),
+  bgBtn:  document.getElementById('bgBtn'),
+  bgPanel: document.getElementById('bgPanel'),
+  count:  document.getElementById('count'),
+  flash:  document.getElementById('flash'),
 };
+
+// selectable UI backgrounds
+const BGS = [
+  { f: './assets/bg1.jpg', name: 'lime' },
+  { f: './assets/bg2.jpg', name: 'blueberry' },
+  { f: './assets/bg3.jpg', name: 'cows' },
+  { f: './assets/bg4.jpg', name: 'orchid' },
+  { f: './assets/bg5.jpg', name: 'glitch cat' },
+  { f: './assets/bg6.jpg', name: 'street' },
+  { f: './assets/bg7.jpg', name: 'corkboard' },
+  { f: './assets/bg8.jpg', name: 'cat collage' },
+];
 
 let filter;
 let camStream = null;
@@ -32,7 +49,8 @@ let stampOn = true;
 let muted = false;
 let intensity = 1.0;
 let sheetOpen = false;   // is the post-capture preview covering the camera?
-let mode = 'video';      // 'video' | 'photo'
+let mode = 'video';      // 'video' | 'photo' | 'booth'
+let boothRunning = false;
 
 let recorder = null, chunks = [], recStart = 0, recTimer = null, lastBlob = null, lastExt = 'mp4';
 
@@ -158,18 +176,100 @@ function finishRecording() {
   sheetOpen = true;
 }
 
+// show an image blob (photo or booth strip) in the result sheet
+function showResultImage(blob) {
+  if (!blob) return;
+  lastBlob = blob;
+  lastExt = 'jpg';
+  els.resultImage.src = URL.createObjectURL(blob);
+  els.resultImage.hidden = false;
+  els.resultVideo.hidden = true;
+  els.result.classList.add('open');
+  sheetOpen = true;
+}
+
 // snap the current filtered frame (stamp included) to a JPEG
 function capturePhoto() {
-  view.toBlob(blob => {
-    if (!blob) return;
-    lastBlob = blob;
-    lastExt = 'jpg';
-    els.resultImage.src = URL.createObjectURL(blob);
-    els.resultImage.hidden = false;
-    els.resultVideo.hidden = true;
-    els.result.classList.add('open');
-    sheetOpen = true;
-  }, 'image/jpeg', 0.92);
+  view.toBlob(blob => showResultImage(blob), 'image/jpeg', 0.92);
+}
+
+// ---- photo booth: 4 shots on a countdown -> collage strip ----
+const wait = ms => new Promise(r => setTimeout(r, ms));
+
+function snapFrame() {
+  const c = document.createElement('canvas');
+  c.width = view.width; c.height = view.height;
+  c.getContext('2d').drawImage(view, 0, 0);
+  return c;
+}
+async function countdown(n) {
+  els.count.hidden = false;
+  for (let k = n; k >= 1; k--) { els.count.textContent = k; await wait(750); }
+  els.count.hidden = true;
+}
+async function flashOnce() {
+  els.flash.hidden = false; await wait(120); els.flash.hidden = true;
+}
+function buildStrip(frames) {
+  const fw = frames[0].width, fh = frames[0].height;
+  const pad = Math.round(fw * 0.05);
+  const footer = Math.round(fh * 0.22);
+  const W = fw + pad * 2, H = fh * 4 + pad * 5 + footer;
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
+  const g = c.getContext('2d');
+  g.fillStyle = '#fbf7ef'; g.fillRect(0, 0, W, H);         // creamy photobooth strip
+  frames.forEach((f, i) => g.drawImage(f, pad, pad + i * (fh + pad), fw, fh));
+  const d = new Date(), p = n => String(n).padStart(2, '0');
+  const dateStr = `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+  g.textAlign = 'center';
+  g.fillStyle = '#ff9628';
+  g.font = `bold ${Math.round(footer * 0.34)}px "Courier New", monospace`;
+  g.fillText('ProCCD', W / 2, H - footer * 0.5);
+  g.fillStyle = '#555';
+  g.font = `bold ${Math.round(footer * 0.24)}px "Courier New", monospace`;
+  g.fillText(dateStr, W / 2, H - footer * 0.16);
+  return c;
+}
+async function runBooth() {
+  if (boothRunning) return;
+  boothRunning = true;
+  els.record.classList.add('busy');
+  const frames = [];
+  try {
+    for (let i = 0; i < 4; i++) {
+      await countdown(3);
+      frames.push(snapFrame());
+      await flashOnce();
+      await wait(400);
+    }
+    await new Promise(res =>
+      buildStrip(frames).toBlob(b => { showResultImage(b); res(); }, 'image/jpeg', 0.92));
+  } finally {
+    boothRunning = false;
+    els.record.classList.remove('busy');
+  }
+}
+
+// ---- selectable UI backgrounds (persisted in localStorage) ----
+function setBackground(i) {
+  const bg = BGS[i] || BGS[0];
+  document.body.style.background =
+    `linear-gradient(rgba(8,10,24,.34), rgba(8,10,24,.34)), url('${bg.f}') center / cover no-repeat`;
+  localStorage.setItem('proccd_bg', i);
+  [...els.bgPanel.children].forEach((b, idx) => b.classList.toggle('active', idx === i));
+}
+function buildBgPanel() {
+  BGS.forEach((bg, i) => {
+    const b = document.createElement('button');
+    b.className = 'bg-thumb';
+    b.style.backgroundImage = `url('${bg.f}')`;
+    b.title = bg.name;
+    b.onclick = () => setBackground(i);
+    els.bgPanel.appendChild(b);
+  });
+  let saved = parseInt(localStorage.getItem('proccd_bg'), 10);
+  if (!(saved >= 0 && saved < BGS.length)) saved = 0;
+  setBackground(saved);
 }
 
 function closeSheet() {
@@ -187,8 +287,9 @@ function setMode(m) {
   mode = m;
   els.modePhoto.classList.toggle('active', m === 'photo');
   els.modeVideo.classList.toggle('active', m === 'video');
-  els.record.classList.toggle('photo', m === 'photo');   // white shutter vs red
-  els.mute.style.visibility = m === 'photo' ? 'hidden' : 'visible';
+  els.modeBooth.classList.toggle('active', m === 'booth');
+  els.record.classList.toggle('photo', m !== 'video');   // white shutter for photo & booth
+  els.mute.style.visibility = m === 'video' ? 'visible' : 'hidden';
 }
 async function saveClip() {
   const name = `proccd_${stampText().replace(/[^0-9]/g, '')}.${lastExt}`;
@@ -204,10 +305,13 @@ async function saveClip() {
 // ---------------------------------------------------------------- UI wiring
 els.record.onclick = () => {
   if (mode === 'photo') return capturePhoto();
+  if (mode === 'booth') return runBooth();
   (recorder && recorder.state === 'recording') ? stopRecording() : startRecording();
 };
 els.modePhoto.onclick = () => setMode('photo');
 els.modeVideo.onclick = () => setMode('video');
+els.modeBooth.onclick = () => setMode('booth');
+els.bgBtn.onclick = () => els.bgPanel.classList.toggle('open');
 els.flip.onclick = async () => {
   facing = facing === 'environment' ? 'user' : 'environment';
   await startCamera();
@@ -235,6 +339,7 @@ els.result.onclick = e => { if (!e.target.closest('.sheet-actions')) closeSheet(
     els.status.textContent = e.message;
     return;
   }
+  buildBgPanel();
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
     els.status.textContent = 'This browser has no camera API. Open in Safari or Chrome over https.';
     return;
