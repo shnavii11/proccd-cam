@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ProCCD — fidelity check (WebGL vs Python)</title>
+  <style>
+    body { margin: 0; background: #111; color: #ddd; font: 14px system-ui, sans-serif; padding: 16px; }
+    h1 { font-size: 16px; font-weight: 600; }
+    .row { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start; }
+    figure { margin: 0; }
+    figcaption { color: #9ad; margin-bottom: 6px; }
+    canvas, img { max-width: 46vw; border-radius: 8px; background: #000; display: block; }
+    .ctl { margin: 12px 0; display: flex; gap: 20px; align-items: center; flex-wrap: wrap; }
+    label { display: inline-flex; gap: 8px; align-items: center; }
+    input[type=range] { width: 160px; accent-color: #ff9628; }
+    #err { color: #ff8a8a; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <h1>ProCCD fidelity check — tune params.js until these look identical</h1>
+  <div class="ctl">
+    <label>look <input id="intensity" type="range" min="0" max="1" step="0.01" value="1" /></label>
+    <label><input id="shimmer" type="checkbox" /> animate noise</label>
+    <span id="err"></span>
+  </div>
+  <div class="row">
+    <figure>
+      <figcaption>WebGL (this app)</figcaption>
+      <canvas id="view"></canvas>
+    </figure>
+    <figure>
+      <figcaption>Python reference (proccd.py)</figcaption>
+      <img id="ref" src="./samples/sample_proccd.jpg" alt="python reference" />
+    </figure>
+    <figure>
+      <figcaption>original</figcaption>
+      <img id="orig" src="./samples/sample.jpg" alt="original" />
+    </figure>
+  </div>
+
+  <canvas id="gl" style="display:none"></canvas>
+
+  <script type="module">
+    import { PARAMS, scaleParams } from './params.js';
+    import { ProCCDFilter } from './filter.js';
+
+    const glCanvas = document.getElementById('gl');
+    const view = document.getElementById('view');
+    const ctx = view.getContext('2d');
+    const errEl = document.getElementById('err');
+    let filter, intensity = 1, animate = false;
+
+    const img = new Image();
+    img.onload = () => {
+      try { filter = new ProCCDFilter(glCanvas); }
+      catch (e) { errEl.textContent = e.message; return; }
+      let w = img.naturalWidth, h = img.naturalHeight;
+      const s = Math.min(1, 1280 / Math.max(w, h));
+      w = Math.round(w * s) & ~1; h = Math.round(h * s) & ~1;
+      view.width = w; view.height = h;
+      filter.baseShort = PARAMS.downres_short_side;
+      filter.resize(w, h);
+      render();
+    };
+    img.src = './samples/sample.jpg';
+
+    function render() {
+      const t = animate ? performance.now() / 1000 : 0;
+      filter.render(img, scaleParams(PARAMS, intensity), t);
+      ctx.drawImage(glCanvas, 0, 0, view.width, view.height);
+      if (animate) requestAnimationFrame(render);
+    }
+    document.getElementById('intensity').oninput = e => { intensity = +e.target.value; if (!animate) render(); };
+    document.getElementById('shimmer').onchange = e => { animate = e.target.checked; if (animate) render(); };
+  </script>
+</body>
+</html>

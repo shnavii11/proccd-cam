@@ -1,0 +1,68 @@
+:root { --orange: #ff9628; --bg: #0a0a0a; }
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body {
+  margin: 0; height: 100%; background: var(--bg); color: #eee;
+  font: 15px/1.4 -apple-system, system-ui, sans-serif;
+  overflow: hidden; overscroll-behavior: none;
+}
+/* hidden pipeline stages */
+#cam, #gl { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; left: -10px; }
+
+main {
+  height: 100dvh; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 14px; padding: env(safe-area-inset-top) 12px 24px;
+}
+#view {
+  max-width: 100%; max-height: 66dvh; border-radius: 14px;
+  background: #000; box-shadow: 0 8px 40px #000a; object-fit: contain;
+}
+#timer {
+  position: fixed; top: calc(env(safe-area-inset-top) + 14px); left: 50%;
+  transform: translateX(-50%); color: var(--orange); font-weight: 700;
+  font-variant-numeric: tabular-nums; letter-spacing: .5px;
+  background: #0007; padding: 4px 12px; border-radius: 999px;
+}
+#status {
+  position: fixed; bottom: 14px; left: 12px; right: 12px; text-align: center;
+  color: #ffb3b3; font-size: 13px;
+}
+
+.controls { display: flex; align-items: center; justify-content: center; gap: 26px; }
+.controls.sub { gap: 18px; opacity: .95; }
+
+.rec {
+  width: 74px; height: 74px; border-radius: 50%; border: 4px solid #fff;
+  background: transparent; padding: 0; cursor: pointer; display: grid; place-items: center;
+}
+.rec span {
+  width: 56px; height: 56px; border-radius: 50%; background: #ff3b30;
+  transition: all .18s ease;
+}
+.rec.recording span { width: 30px; height: 30px; border-radius: 8px; }
+
+.chip {
+  min-width: 46px; height: 46px; padding: 0 12px; border-radius: 999px;
+  border: 1px solid #ffffff2a; background: #ffffff12; color: #eee;
+  font-size: 18px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+}
+.chip.label { font-size: 14px; }
+.chip.off { opacity: .4; }
+
+.slider {
+  display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: #bbb;
+}
+.slider input { accent-color: var(--orange); width: 120px; }
+
+/* post-record sheet */
+.sheet {
+  position: fixed; inset: 0; background: #000d; backdrop-filter: blur(6px);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 16px; padding: 20px; z-index: 10;
+}
+.sheet video { max-width: 100%; max-height: 72dvh; border-radius: 14px; background: #000; }
+.sheet-actions { display: flex; gap: 14px; }
+.hint { color: #888; font-size: 12px; margin: 2px 0 0; }
+.rec-save {
+  padding: 12px 26px; border-radius: 999px; border: none; cursor: pointer;
+  background: var(--orange); color: #1a1000; font-weight: 700; font-size: 16px;
+}

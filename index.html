@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+  <title>ProCCD Cam</title>
+  <meta name="theme-color" content="#0a0a0a" />
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <!-- iOS "Add to Home Screen" support -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="ProCCD" />
+  <link rel="apple-touch-icon" href="./icons/icon-180.png" />
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <!-- hidden pipeline elements -->
+  <video id="cam" playsinline muted autoplay></video>
+  <canvas id="gl"></canvas>
+
+  <main>
+    <!-- the visible, recorded surface -->
+    <canvas id="view"></canvas>
+    <div id="timer" hidden>● 00:00</div>
+    <div id="status"></div>
+
+    <div class="controls">
+      <button id="mute"  class="chip" title="Mute mic">🔊</button>
+      <button id="record" class="rec" title="Record"><span></span></button>
+      <button id="flip"  class="chip" title="Flip camera">⟲</button>
+    </div>
+
+    <div class="controls sub">
+      <button id="stamp" class="chip label" title="Toggle date/time">🕑 stamp</button>
+      <label class="slider">look
+        <input id="intensity" type="range" min="0" max="1" step="0.01" value="1" />
+      </label>
+    </div>
+  </main>
+
+  <!-- post-record preview -->
+  <div id="result" class="sheet" hidden>
+    <video id="resultVideo" controls playsinline></video>
+    <div class="sheet-actions">
+      <button id="discard" class="chip">Discard</button>
+      <button id="save" class="rec-save">Save ▾</button>
+    </div>
+    <p class="hint">tap outside to go back to the camera</p>
+  </div>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
