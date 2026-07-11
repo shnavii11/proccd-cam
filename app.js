@@ -41,6 +41,11 @@ const BGS = [
   { f: './assets/bg6.jpg', name: 'street' },
   { f: './assets/bg7.jpg', name: 'corkboard' },
   { f: './assets/bg8.jpg', name: 'cat collage' },
+  { f: './assets/bg9.jpg', name: 'lemon gingham' },
+  { f: './assets/bg10.jpg', name: 'stamps' },
+  { f: './assets/bg11.jpg', name: 'pressed flowers' },
+  { f: './assets/bg12.jpg', name: 'clover lace' },
+  { f: './assets/bg13.jpg', name: 'wind chimes' },
 ];
 
 let filter;
