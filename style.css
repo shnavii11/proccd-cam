@@ -5,6 +5,12 @@ html, body {
   font: 15px/1.4 -apple-system, system-ui, sans-serif;
   overflow: hidden; overscroll-behavior: none;
 }
+/* lime-gingham background for the camera UI (dark tint keeps controls legible) */
+body {
+  background:
+    linear-gradient(rgba(8, 10, 24, 0.34), rgba(8, 10, 24, 0.34)),
+    url('./assets/bg.jpg') center / cover no-repeat;
+}
 /* hidden pipeline stages */
 #cam, #gl { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; left: -10px; }
 

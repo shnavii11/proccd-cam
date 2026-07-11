@@ -80,13 +80,19 @@ function drawStamp() {
   ctx.font = `bold ${size}px "Courier New", Menlo, monospace`;
   ctx.textAlign = 'right';
   ctx.textBaseline = 'alphabetic';
+  const d = new Date(), p = n => String(n).padStart(2, '0');
+  const dateStr = `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+  const timeStr = `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
   const x = view.width - Math.round(view.width * 0.04);
-  const y = view.height - Math.round(h * 0.05);
+  const yTime = view.height - Math.round(h * 0.05);   // bottom line = time
+  const yDate = yTime - Math.round(size * 1.25);       // date sits above it
   const [r, g, b] = PARAMS.stamp_color;
-  ctx.fillStyle = 'rgba(120,40,0,0.9)';   // faint shadow
-  ctx.fillText(stampText(), x + 2, y + 2);
-  ctx.fillStyle = `rgb(${r},${g},${b})`;   // orange dot-matrix
-  ctx.fillText(stampText(), x, y);
+  ctx.fillStyle = 'rgba(120,40,0,0.9)';                // faint shadow
+  ctx.fillText(dateStr, x + 2, yDate + 2);
+  ctx.fillText(timeStr, x + 2, yTime + 2);
+  ctx.fillStyle = `rgb(${r},${g},${b})`;               // orange dot-matrix
+  ctx.fillText(dateStr, x, yDate);
+  ctx.fillText(timeStr, x, yTime);
 }
 
 // ---------------------------------------------------------------- render loop
