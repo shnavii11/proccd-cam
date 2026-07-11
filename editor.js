@@ -2,8 +2,7 @@
 // add a patterned background + draggable/resizable/rotatable stickers, flatten to one image.
 // Pure DOM layers (CSS transforms) for smooth touch; rasterised to a canvas on save.
 
-const STICKERS = Array.from({ length: 26 }, (_, i) =>
-  `./assets/stickers/s${String(i + 1).padStart(2, '0')}.png`);
+import { STICKERS } from './stickers.js';
 
 const CARD_W = 1080, CARD_H = 1440;   // export resolution (3:4)
 const CREAM = '#fbf7ef';
@@ -155,9 +154,10 @@ function buildStickerTray() {
     const t = document.createElement('button');
     t.className = 'stk-thumb';
     const im = document.createElement('img');
-    im.src = src; im.loading = 'lazy'; im.alt = '';
+    im.src = src.replace('/stickers/', '/stickers/thumbs/');   // light tray thumbnail
+    im.loading = 'lazy'; im.alt = '';
     t.appendChild(im);
-    t.onclick = () => addSticker(src);
+    t.onclick = () => addSticker(src);                         // full-res on placement
     el.trayStk.appendChild(t);
   });
 }
@@ -198,13 +198,13 @@ function addLayer(visual, o) {
   let del = null;
   if (o.deletable) {
     del = document.createElement('button');
-    del.className = 'del'; del.textContent = '✕';
+    del.className = 'del'; del.textContent = '×';
     del.addEventListener('pointerdown', e => e.stopPropagation());
     del.addEventListener('click', e => { e.stopPropagation(); removeLayer(L); });
     node.appendChild(del);
   }
   const hnd = document.createElement('button');
-  hnd.className = 'hnd'; hnd.textContent = '⤢';
+  hnd.className = 'hnd'; hnd.textContent = '◢';
   node.appendChild(hnd);
 
   const L = {

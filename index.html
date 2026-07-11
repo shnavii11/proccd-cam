@@ -29,17 +29,18 @@
     <!-- the visible, recorded surface -->
     <canvas id="view"></canvas>
     <div id="timer" hidden>● 00:00</div>
+    <div id="zoom" hidden>1.0×</div>
     <div id="status"></div>
 
     <div class="controls">
-      <button id="mute"  class="chip" title="Mute mic">🔊</button>
+      <button id="mute"  class="chip label" title="Mute mic">mic</button>
       <button id="record" class="rec" title="Record"><span></span></button>
-      <button id="flip"  class="chip" title="Flip camera">⟲</button>
+      <button id="flip"  class="chip label" title="Flip camera">flip</button>
     </div>
 
     <div class="controls sub">
-      <button id="stamp" class="chip label" title="Toggle date/time">🕑 stamp</button>
-      <button id="bgBtn" class="chip label" title="Change background">🎨 bg</button>
+      <button id="stamp" class="chip label" title="Toggle date/time">date</button>
+      <button id="bgBtn" class="chip label" title="Change background">bg</button>
       <label class="slider">look
         <input id="intensity" type="range" min="0" max="1" step="0.01" value="1" />
       </label>
@@ -59,8 +60,8 @@
     <img id="resultImage" alt="captured photo" hidden />
     <div class="sheet-actions">
       <button id="discard" class="chip">Retake</button>
-      <button id="decorate" class="chip">✨ Decorate</button>
-      <button id="save" class="rec-save">Save ▾</button>
+      <button id="decorate" class="chip">Decorate</button>
+      <button id="save" class="rec-save">Save</button>
     </div>
     <p class="hint">tap the preview (or anywhere) to go back to the camera</p>
   </div>
@@ -69,17 +70,17 @@
   <div id="editor">
     <div class="ed-bar">
       <button id="edBack" class="chip">←</button>
-      <span class="ed-title">decorate ✨</span>
-      <button id="edSave" class="rec-save">Save ▾</button>
+      <span class="ed-title">decorate</span>
+      <button id="edSave" class="rec-save">Save</button>
     </div>
     <div id="edWrap"><div id="stage"></div></div>
     <div class="ed-tabs">
-      <button id="tabStk" class="ed-tab active">✨ stickers</button>
-      <button id="tabBg" class="ed-tab">🎨 background</button>
+      <button id="tabStk" class="ed-tab active">stickers</button>
+      <button id="tabBg" class="ed-tab">background</button>
     </div>
     <div id="trayStk" class="ed-tray"></div>
     <div id="trayBg" class="ed-tray" hidden></div>
-    <p class="hint">drag to move · pinch or ⤢ to resize &amp; rotate · ✕ to remove</p>
+    <p class="hint">drag to move · pinch or corner-drag to resize &amp; rotate · × to remove</p>
   </div>
 
   <script type="module" src="./app.js"></script>

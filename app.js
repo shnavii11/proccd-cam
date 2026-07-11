@@ -15,6 +15,7 @@ const els = {
   stamp:  document.getElementById('stamp'),
   intensity: document.getElementById('intensity'),
   timer:  document.getElementById('timer'),
+  zoom:   document.getElementById('zoom'),
   status: document.getElementById('status'),
   result: document.getElementById('result'),
   resultVideo: document.getElementById('resultVideo'),
@@ -59,6 +60,9 @@ let sheetOpen = false;   // is the post-capture preview covering the camera?
 let mode = 'video';      // 'video' | 'photo' | 'booth'
 let boothRunning = false;
 let curBg = 0;           // currently selected UI background index
+let zoom = 1;            // digital zoom factor (1–5), pinch on the preview
+const srcCanvas = document.createElement('canvas');   // holds the cropped (zoomed) frame
+const srcCtx = srcCanvas.getContext('2d');
 
 let recorder = null, chunks = [], recStart = 0, recTimer = null, lastBlob = null, lastExt = 'mp4';
 
@@ -90,6 +94,7 @@ function sizeCanvases() {
   w = Math.round(w * scale) & ~1;
   h = Math.round(h * scale) & ~1;
   view.width = w; view.height = h;
+  srcCanvas.width = w; srcCanvas.height = h;
   filter.baseShort = PARAMS.downres_short_side;
   filter.resize(w, h);
 }
@@ -126,12 +131,62 @@ function loop() {
   if (!sheetOpen && video.readyState >= 2 && filter.W) {
     const t = performance.now() / 1000;
     const p = scaleParams(PARAMS, intensity);
-    filter.render(video, p, t, { flipX: mirror });
+    let source = video;
+    if (zoom > 1.001) {                       // digital zoom: crop the centre of the frame
+      const vw = video.videoWidth, vh = video.videoHeight;
+      const sw = vw / zoom, sh = vh / zoom;
+      srcCtx.drawImage(video, (vw - sw) / 2, (vh - sh) / 2, sw, sh, 0, 0, srcCanvas.width, srcCanvas.height);
+      source = srcCanvas;
+    }
+    filter.render(source, p, t, { flipX: mirror });
     ctx.drawImage(glCanvas, 0, 0, view.width, view.height);
     if (stampOn) drawStamp();
   }
   requestAnimationFrame(loop);
 }
+
+// ---------------------------------------------------------------- pinch-to-zoom
+const zoomPtrs = new Map();
+let zoomStartDist = 0, zoomStart = 1, zoomHideT = null, lastTap = 0, pinchActive = false;
+function showZoom() {
+  els.zoom.textContent = zoom.toFixed(1) + '×';
+  els.zoom.hidden = false;
+  clearTimeout(zoomHideT);
+  zoomHideT = setTimeout(() => { if (zoom <= 1.001) els.zoom.hidden = true; }, 1200);
+}
+function setZoom(z) { zoom = Math.min(5, Math.max(1, z)); showZoom(); }
+view.addEventListener('pointerdown', e => {
+  if (sheetOpen) return;
+  zoomPtrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (zoomPtrs.size === 2) {
+    pinchActive = true;
+    const [a, b] = [...zoomPtrs.values()];
+    zoomStartDist = Math.hypot(a.x - b.x, a.y - b.y);
+    zoomStart = zoom;
+  }
+});
+view.addEventListener('pointermove', e => {
+  if (!zoomPtrs.has(e.pointerId)) return;
+  zoomPtrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (zoomPtrs.size >= 2 && zoomStartDist) {
+    const [a, b] = [...zoomPtrs.values()];
+    setZoom(zoomStart * Math.hypot(a.x - b.x, a.y - b.y) / zoomStartDist);
+  }
+});
+function endZoom(e) {
+  zoomPtrs.delete(e.pointerId);
+  if (zoomPtrs.size < 2) zoomStartDist = 0;
+  if (zoomPtrs.size === 0) {
+    if (!pinchActive) {                         // genuine solo tap -> allow double-tap reset
+      const now = Date.now();
+      if (now - lastTap < 300) setZoom(1);
+      lastTap = now;
+    }
+    pinchActive = false;
+  }
+}
+view.addEventListener('pointerup', endZoom);
+view.addEventListener('pointercancel', endZoom);
 
 // ---------------------------------------------------------------- recording
 function pickMime() {
@@ -334,12 +389,13 @@ els.modeBooth.onclick = () => setMode('booth');
 els.bgBtn.onclick = () => els.bgPanel.classList.toggle('open');
 els.flip.onclick = async () => {
   facing = facing === 'environment' ? 'user' : 'environment';
+  zoom = 1; els.zoom.hidden = true;
   await startCamera();
 };
 els.mute.onclick = () => {
   muted = !muted;
   els.mute.classList.toggle('off', muted);
-  els.mute.textContent = muted ? '🔇' : '🔊';
+  els.mute.textContent = muted ? 'muted' : 'mic';
 };
 els.stamp.onclick = () => {
   stampOn = !stampOn;
