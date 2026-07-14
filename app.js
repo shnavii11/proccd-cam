@@ -65,6 +65,7 @@ const srcCanvas = document.createElement('canvas');   // holds the cropped (zoom
 const srcCtx = srcCanvas.getContext('2d');
 
 let recorder = null, chunks = [], recStart = 0, recTimer = null, lastBlob = null, lastExt = 'mp4';
+let recVideoTrack = null;   // canvas capture track we manually pump frames into while recording
 
 // ---------------------------------------------------------------- camera
 async function startCamera() {
@@ -141,6 +142,7 @@ function loop() {
     filter.render(source, p, t, { flipX: mirror });
     ctx.drawImage(glCanvas, 0, 0, view.width, view.height);
     if (stampOn) drawStamp();
+    if (recVideoTrack) recVideoTrack.requestFrame();   // hand the recorder this frame
   }
   requestAnimationFrame(loop);
 }
@@ -199,7 +201,16 @@ function pickMime() {
   return '';
 }
 function startRecording() {
-  const stream = view.captureStream(30);
+  // iOS Safari stops feeding the recorder's video track after ~10s when the browser
+  // auto-pulls frames (captureStream(30)) — audio keeps going, video dies. Fix: pump
+  // frames manually via captureStream(0) + track.requestFrame() each rendered frame.
+  // Fall back to auto-capture on browsers that don't support requestFrame().
+  let stream = view.captureStream(0);
+  recVideoTrack = stream.getVideoTracks()[0];
+  if (!recVideoTrack || typeof recVideoTrack.requestFrame !== 'function') {
+    recVideoTrack = null;                 // no manual pumping available
+    stream = view.captureStream(30);      // let the browser pull frames instead
+  }
   if (!muted) {
     const a = camStream.getAudioTracks()[0];
     if (a) stream.addTrack(a);
@@ -223,6 +234,7 @@ function startRecording() {
 }
 function stopRecording() {
   if (recorder && recorder.state !== 'inactive') recorder.stop();
+  recVideoTrack = null;
   clearInterval(recTimer);
   els.record.classList.remove('recording');
   view.classList.remove('rec-on');
