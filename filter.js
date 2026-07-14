@@ -43,7 +43,7 @@ const FRAG_TONE = `
 precision highp float;
 varying vec2 v_uv;
 uniform sampler2D u_tex;
-uniform float u_ca, u_contrast, u_black, u_falloff, u_sat;
+uniform float u_ca, u_contrast, u_black, u_falloff, u_sat, u_lift;
 uniform vec3 u_shadowTint, u_highlightTint;
 uniform float u_shadowStr, u_highlightStr;
 ${LUMA}
@@ -70,6 +70,9 @@ void main(){
   // saturation
   float L2 = luma(c);
   c = clamp(vec3(L2) + (c - vec3(L2)) * u_sat, 0.0, 1.0);
+
+  // matte lift — raise the black floor for the flat, milky "Flatzip" fade
+  c = u_lift + c * (1.0 - u_lift);
   gl_FragColor = vec4(c, 1.0);
 }
 `;
@@ -289,6 +292,7 @@ export class ProCCDFilter {
     gl.uniform1f(loc(gl, this.pTone, 'u_black'), p.black_point);
     gl.uniform1f(loc(gl, this.pTone, 'u_falloff'), p.tone_falloff);
     gl.uniform1f(loc(gl, this.pTone, 'u_sat'), p.saturation);
+    gl.uniform1f(loc(gl, this.pTone, 'u_lift'), p.lift);
     gl.uniform3fv(loc(gl, this.pTone, 'u_shadowTint'), p.shadow_tint);
     gl.uniform3fv(loc(gl, this.pTone, 'u_highlightTint'), p.highlight_tint);
     gl.uniform1f(loc(gl, this.pTone, 'u_shadowStr'), p.shadow_strength);

@@ -7,16 +7,17 @@ export const PARAMS = {
   softness: 0.35,            // extra blur after upscale (kept low; bilinear already softens)
 
   // 2. split-tone: RGB nudges pushed into shadows / highlights
-  shadow_tint:    [-0.05, 0.00, 0.10],  // blue into the darks
-  highlight_tint: [ 0.10, 0.04, -0.07], // amber/orange into the lights
+  shadow_tint:    [-0.04, 0.01, 0.09],  // cool blue-teal into the darks
+  highlight_tint: [-0.02, 0.00, 0.03],  // clean, faintly cool highlights (no amber)
   shadow_strength: 0.55,
-  highlight_strength: 0.65,
+  highlight_strength: 0.35,
   tone_falloff: 1.4,         // how tightly tints hug the extremes
 
   // 3. contrast + color
-  contrast: 0.30,            // S-curve amount (0 = none)
-  black_point: 0.04,         // crush shadows below this to black
-  saturation: 1.45,          // >1 punchier
+  contrast: 0.16,            // S-curve amount (0 = none) — flat "Flatzip" look
+  black_point: 0.0,          // no crush; lift (below) sets the matte floor instead
+  lift: 0.05,                // raise the black floor -> milky, faded, low-contrast
+  saturation: 1.12,          // muted, cool-leaning greens (was punchy 1.45)
 
   // 4. highlight bloom / halation
   bloom_threshold: 0.72,     // only pixels brighter than this bloom
@@ -49,6 +50,7 @@ export function scaleParams(p, k) {
   s.shadow_strength     = lerp(0, p.shadow_strength, k);
   s.highlight_strength  = lerp(0, p.highlight_strength, k);
   s.contrast            = lerp(0, p.contrast, k);
+  s.lift                = lerp(0, p.lift, k);
   s.saturation          = lerp(1, p.saturation, k);
   s.bloom_strength      = lerp(0, p.bloom_strength, k);
   s.ca_amount           = lerp(0, p.ca_amount, k);
