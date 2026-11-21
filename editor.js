@@ -3,6 +3,7 @@
 // Pure DOM layers (CSS transforms) for smooth touch; rasterised to a canvas on save.
 
 import { STICKERS } from './stickers.js';
+import { TEMPLATES } from './templates.js';
 
 const CARD_W = 1080, CARD_H = 1440;   // export resolution (3:4)
 const CREAM = '#fbf7ef';
@@ -48,16 +49,20 @@ export function initEditor(o) {
     save:   $('edSave'),
     tabStk: $('tabStk'),
     tabBg:  $('tabBg'),
+    tabTpl: $('tabTpl'),
     trayStk:$('trayStk'),
     trayBg: $('trayBg'),
+    trayTpl:$('trayTpl'),
   };
   buildStickerTray();
   buildBgTray();
+  buildTemplateTray();
 
   el.back.onclick = () => close(true);
   el.save.onclick = saveComposite;
   el.tabStk.onclick = () => showTab('stk');
   el.tabBg.onclick  = () => showTab('bg');
+  el.tabTpl.onclick = () => showTab('tpl');
 
   // tap empty card space to deselect
   el.stage.addEventListener('pointerdown', e => { if (e.target === el.stage) select(null); });
@@ -69,11 +74,12 @@ export function initEditor(o) {
 }
 
 function showTab(which) {
-  const stk = which === 'stk';
-  el.tabStk.classList.toggle('active', stk);
-  el.tabBg.classList.toggle('active', !stk);
-  el.trayStk.hidden = !stk;
-  el.trayBg.hidden = stk;
+  el.tabStk.classList.toggle('active', which === 'stk');
+  el.tabBg.classList.toggle('active', which === 'bg');
+  el.tabTpl.classList.toggle('active', which === 'tpl');
+  el.trayStk.hidden = which !== 'stk';
+  el.trayBg.hidden = which !== 'bg';
+  el.trayTpl.hidden = which !== 'tpl';
 }
 
 // ---------------------------------------------------------------- open / close
@@ -83,7 +89,7 @@ export async function openEditor(blob, cbs = {}) {
   el.stage.innerHTML = '';
   fitStage();
   el.root.classList.add('open');
-  showTab('stk');
+  showTab('tpl');
 
   // background defaults to whatever pattern the camera UI is showing
   const start = (opts.getBgIndex && opts.getBgIndex()) ?? 0;
@@ -170,6 +176,46 @@ async function addSticker(src) {
     cx: el.stage.clientWidth / 2, cy: el.stage.clientHeight / 2,
     baseW, rot: 0, deletable: true, shadow: false,
   });
+}
+
+// ---------------------------------------------------------------- templates
+// a background + sticker pack, bundled. Applying one sets the bg and
+// scatters that pack's stickers at random spots/sizes/rotations over the
+// card (re-randomized every time, even for the same template) so stickers
+// land overlapping the photo instead of needing to be placed by hand.
+function buildTemplateTray() {
+  TEMPLATES.forEach((t, i) => {
+    const b = document.createElement('button');
+    b.className = 'tpl-thumb';
+    b.style.backgroundImage = `url('${opts.bgs[t.bg].f}')`;
+    b.title = t.name;
+    const label = document.createElement('span');
+    label.className = 'tpl-label';
+    label.textContent = t.name;
+    b.appendChild(label);
+    b.onclick = () => applyTemplate(t);
+    el.trayTpl.appendChild(b);
+  });
+}
+
+function clearStickers() {
+  [...layers].filter(l => l.deletable).forEach(removeLayer);
+}
+
+async function applyTemplate(t) {
+  clearStickers();
+  await setBg(t.bg);
+  const sw = el.stage.clientWidth, sh = el.stage.clientHeight;
+  const margin = sw * 0.08;   // keep sticker centres mostly on-card
+  for (const src of t.stickers) {
+    const img = await loadImg(src);
+    const baseW = sw * (0.20 + Math.random() * 0.14);        // 0.20–0.34
+    const cx = margin + Math.random() * (sw - margin * 2);
+    const cy = margin + Math.random() * (sh - margin * 2);
+    const rot = (Math.random() * 0.7 - 0.35) * Math.PI;      // ±~63°
+    addLayer(img, { cx, cy, baseW, rot, deletable: true, shadow: false });
+  }
+  select(null);
 }
 
 // ---------------------------------------------------------------- layers

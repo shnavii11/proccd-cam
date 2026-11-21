@@ -68,12 +68,25 @@ let recorder = null, chunks = [], recStart = 0, recTimer = null, lastBlob = null
 let recVideoTrack = null;   // canvas capture track we manually pump frames into while recording
 
 // ---------------------------------------------------------------- camera
+// Camera (video) and mic (audio) are requested as SEPARATE getUserMedia calls.
+// Browsers remember a granted permission per-origin and won't re-prompt for it —
+// but if video+audio are asked for together and the mic half is ever denied or
+// dismissed, some browsers re-prompt for BOTH on every reload. Asking separately
+// means a once-granted camera stays silently granted even if the mic doesn't.
+let audioTrack = null;   // live mic track, re-used across record sessions once granted
+async function getAudioTrack() {
+  if (audioTrack && audioTrack.readyState === 'live') return audioTrack;
+  try {
+    const s = await navigator.mediaDevices.getUserMedia({ audio: true });
+    audioTrack = s.getAudioTracks()[0] || null;
+  } catch (_) { audioTrack = null; }   // mic denied — recording continues without audio
+  return audioTrack;
+}
 async function startCamera() {
   if (camStream) camStream.getTracks().forEach(t => t.stop());
   mirror = facing === 'user';
   try {
     camStream = await navigator.mediaDevices.getUserMedia({
-      audio: true,
       video: { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 720 } },
     });
   } catch (e) {
@@ -200,7 +213,7 @@ function pickMime() {
   for (const m of cands) if (MediaRecorder.isTypeSupported(m)) return m;
   return '';
 }
-function startRecording() {
+async function startRecording() {
   // iOS Safari stops feeding the recorder's video track after ~10s when the browser
   // auto-pulls frames (captureStream(30)) — audio keeps going, video dies. Fix: pump
   // frames manually via captureStream(0) + track.requestFrame() each rendered frame.
@@ -212,7 +225,7 @@ function startRecording() {
     stream = view.captureStream(30);      // let the browser pull frames instead
   }
   if (!muted) {
-    const a = camStream.getAudioTracks()[0];
+    const a = await getAudioTrack();      // prompts for mic on first use only
     if (a) stream.addTrack(a);
   }
   const mime = pickMime();
