@@ -1,6 +1,6 @@
 // Minimal service worker: caches the app shell so ProCCD Cam installs and
 // launches offline. Bump CACHE when you change any file.
-const CACHE = 'proccd-cam-v12';
+const CACHE = 'proccd-cam-v13';
 const SHELL = [
   './', './index.html', './style.css',
   './app.js', './filter.js', './params.js', './editor.js', './stickers.js', './templates.js',
@@ -20,8 +20,10 @@ self.addEventListener('activate', e => {
 // (avoids serving stale code during active development)
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
+  // 'reload' forces past the browser's own HTTP disk cache too — without this,
+  // a fresh deploy can still serve a stale .js file the browser cached by ETag.
   e.respondWith(
-    fetch(e.request).then(res => {
+    fetch(e.request, { cache: 'reload' }).then(res => {
       const copy = res.clone();
       caches.open(CACHE).then(c => c.put(e.request, copy)).catch(() => {});
       return res;
