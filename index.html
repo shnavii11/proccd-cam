@@ -11,6 +11,9 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="ProCCD" />
   <link rel="apple-touch-icon" href="./icons/icon-180.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="./style.css" />
 </head>
 <body>
@@ -79,7 +82,13 @@
       <button id="tabStk" class="ed-tab">stickers</button>
       <button id="tabBg" class="ed-tab">background</button>
     </div>
-    <div id="trayTpl" class="ed-tray"></div>
+    <div id="trayTpl" class="tpl-wrap">
+      <div class="tpl-fam">
+        <button id="famScrap" class="tpl-fam-btn active">scrapbook</button>
+        <button id="famMood" class="tpl-fam-btn">moody</button>
+      </div>
+      <div id="trayTplList" class="ed-tray"></div>
+    </div>
     <div id="trayStk" class="ed-tray" hidden></div>
     <div id="trayBg" class="ed-tray" hidden></div>
     <p class="hint">drag to move · pinch or corner-drag to resize &amp; rotate · × to remove</p>

@@ -3,7 +3,7 @@
 // Pure DOM layers (CSS transforms) for smooth touch; rasterised to a canvas on save.
 
 import { STICKERS } from './stickers.js';
-import { TEMPLATES } from './templates.js';
+import { SCRAPBOOK_TEMPLATES, MOODY_TEMPLATES, cssGradient, canvasGradient } from './templates.js';
 
 const CARD_W = 1080, CARD_H = 1440;   // export resolution (3:4)
 const CREAM = '#fbf7ef';
@@ -16,6 +16,7 @@ let bgIndex = -1;         // -1 = plain cream card
 const bgImgCache = {};    // index -> loaded HTMLImageElement (for export)
 let gesture = null;
 let onBackCb = null;
+let moodyStops = null;   // non-null while a moody gradient (no bg image) is active
 
 // ---------------------------------------------------------------- helpers
 const $ = id => document.getElementById(id);
@@ -52,11 +53,16 @@ export function initEditor(o) {
     tabTpl: $('tabTpl'),
     trayStk:$('trayStk'),
     trayBg: $('trayBg'),
+    trayTplList: $('trayTplList'),
+    famScrap: $('famScrap'),
+    famMood:  $('famMood'),
     trayTpl:$('trayTpl'),
   };
   buildStickerTray();
   buildBgTray();
-  buildTemplateTray();
+  el.famScrap.onclick = () => showTemplateFamily('scrapbook');
+  el.famMood.onclick  = () => showTemplateFamily('moody');
+  showTemplateFamily('scrapbook');
 
   el.back.onclick = () => close(true);
   el.save.onclick = saveComposite;
@@ -128,6 +134,7 @@ function fitStage() {
 // ---------------------------------------------------------------- backgrounds
 async function setBg(i) {
   bgIndex = i;
+  moodyStops = null;
   if (i < 0) {
     el.stage.style.background = CREAM;
   } else {
@@ -179,41 +186,96 @@ async function addSticker(src) {
 }
 
 // ---------------------------------------------------------------- templates
-// a background + sticker pack, bundled. Applying one sets the bg and
-// scatters that pack's stickers at random spots/sizes/rotations over the
-// card (re-randomized every time, even for the same template) so stickers
-// land overlapping the photo instead of needing to be placed by hand.
-function buildTemplateTray() {
-  TEMPLATES.forEach((t, i) => {
+// scrapbook: bg + a sticker pack scattered at random spots/sizes/rotations
+// (re-randomized every time, even for the same template) so stickers land
+// overlapping the photo instead of needing to be placed by hand.
+// moody: dark backdrop + the photo desaturated + one typed caption layer.
+function showTemplateFamily(fam) {
+  el.famScrap.classList.toggle('active', fam === 'scrapbook');
+  el.famMood.classList.toggle('active', fam === 'moody');
+  el.trayTplList.innerHTML = '';
+  const list = fam === 'scrapbook' ? SCRAPBOOK_TEMPLATES : MOODY_TEMPLATES;
+  list.forEach(t => {
     const b = document.createElement('button');
     b.className = 'tpl-thumb';
-    b.style.backgroundImage = `url('${opts.bgs[t.bg].f}')`;
+    b.style.background = fam === 'scrapbook' ? `url('${opts.bgs[t.bg].f}') center / cover` : cssGradient(t.stops);
     b.title = t.name;
     const label = document.createElement('span');
     label.className = 'tpl-label';
     label.textContent = t.name;
     b.appendChild(label);
-    b.onclick = () => applyTemplate(t);
-    el.trayTpl.appendChild(b);
+    b.onclick = () => (fam === 'scrapbook' ? applyScrapbook(t) : applyMoody(t));
+    el.trayTplList.appendChild(b);
   });
 }
 
 function clearStickers() {
   [...layers].filter(l => l.deletable).forEach(removeLayer);
 }
+function basePhotoLayer() { return layers.find(l => !l.deletable); }
+function setPhotoFilter(css) {
+  const L = basePhotoLayer();
+  if (!L) return;
+  L.cssFilter = css || '';
+  L.visual.style.filter = L.cssFilter;
+}
 
-async function applyTemplate(t) {
+async function applyScrapbook(t) {
   clearStickers();
+  setPhotoFilter('');
   await setBg(t.bg);
   const sw = el.stage.clientWidth, sh = el.stage.clientHeight;
   const margin = sw * 0.08;   // keep sticker centres mostly on-card
   for (const src of t.stickers) {
     const img = await loadImg(src);
-    const baseW = sw * (0.20 + Math.random() * 0.14);        // 0.20–0.34
+    const baseW = sw * (0.16 + Math.random() * 0.12);         // 0.16–0.28
     const cx = margin + Math.random() * (sw - margin * 2);
     const cy = margin + Math.random() * (sh - margin * 2);
-    const rot = (Math.random() * 0.7 - 0.35) * Math.PI;      // ±~63°
+    const rot = (Math.random() * 0.7 - 0.35) * Math.PI;       // ±~63°
     addLayer(img, { cx, cy, baseW, rot, deletable: true, shadow: false });
+  }
+  select(null);
+}
+
+// word-wraps `text` onto a transparent canvas in a handwritten font —
+// reused as a normal layer (addLayer handles img OR canvas visuals alike).
+async function makeCaptionLayer(text, maxW) {
+  try { await document.fonts.load('700 56px "Caveat"'); } catch (_) {}
+  const font = '700 56px "Caveat", "Segoe Script", cursive';
+  const probe = document.createElement('canvas').getContext('2d');
+  probe.font = font;
+  const words = text.split(/\s+/).filter(Boolean);
+  const lines = []; let line = '';
+  for (const w of words) {
+    const test = line ? line + ' ' + w : w;
+    if (probe.measureText(test).width > maxW && line) { lines.push(line); line = w; }
+    else line = test;
+  }
+  if (line) lines.push(line);
+  const lh = 64;
+  const c = document.createElement('canvas');
+  c.width = maxW; c.height = lh * lines.length + 16;
+  const g = c.getContext('2d');
+  g.font = font; g.fillStyle = '#fdf3e4'; g.textBaseline = 'alphabetic';
+  g.shadowColor = 'rgba(0,0,0,.55)'; g.shadowBlur = 8; g.shadowOffsetY = 2;
+  lines.forEach((l, i) => g.fillText(l, 0, lh * (i + 1) - 14));
+  return c;
+}
+
+async function applyMoody(t) {
+  const text = (window.prompt('Caption for this photo:', '') || '').trim();
+  clearStickers();
+  await setBg(-1);                       // reset to "no image bg" state
+  moodyStops = t.stops;
+  el.stage.style.background = cssGradient(t.stops);
+  setPhotoFilter(t.photoFilter);
+  if (text) {
+    const sw = el.stage.clientWidth, sh = el.stage.clientHeight;
+    const cap = await makeCaptionLayer(text, sw * 0.8);
+    addLayer(cap, {
+      cx: sw / 2, cy: sh * 0.86, baseW: sw * 0.8,
+      rot: -2 * Math.PI / 180, deletable: true, shadow: false,
+    });
   }
   select(null);
 }
@@ -381,7 +443,8 @@ async function saveComposite() {
   const g = c.getContext('2d');
   const sx = CARD_W / el.stage.clientWidth, sy = CARD_H / el.stage.clientHeight;
 
-  if (bgIndex >= 0 && bgImgCache[bgIndex]) drawCover(g, bgImgCache[bgIndex], CARD_W, CARD_H);
+  if (moodyStops) { g.fillStyle = canvasGradient(g, CARD_H, moodyStops); g.fillRect(0, 0, CARD_W, CARD_H); }
+  else if (bgIndex >= 0 && bgImgCache[bgIndex]) drawCover(g, bgImgCache[bgIndex], CARD_W, CARD_H);
   else { g.fillStyle = CREAM; g.fillRect(0, 0, CARD_W, CARD_H); }
 
   for (const L of layers) {
@@ -394,7 +457,9 @@ async function saveComposite() {
       g.shadowColor = 'rgba(0,0,0,0.30)';
       g.shadowBlur = 22 * sx; g.shadowOffsetY = 10 * sx;
     }
+    if (L.cssFilter) g.filter = L.cssFilter;
     g.drawImage(L.visual, -w / 2, -h / 2, w, h);
+    g.filter = 'none';
     g.restore();
   }
 

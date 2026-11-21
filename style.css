@@ -188,6 +188,13 @@ main {
   display: flex; align-items: center; justify-content: center;
 }
 .bg-opt.active { border-color: var(--orange); box-shadow: 0 0 0 2px var(--orange); }
+.tpl-wrap[hidden] { display: none; }
+.tpl-fam { display: flex; gap: 6px; justify-content: center; padding: 2px 12px 6px; }
+.tpl-fam-btn {
+  border: none; background: #ffffff10; color: #999;
+  padding: 5px 14px; border-radius: 999px; font-size: 12px; cursor: pointer;
+}
+.tpl-fam-btn.active { background: #ffffff28; color: #fff; }
 .tpl-thumb {
   flex: 0 0 auto; width: 64px; height: 80px; border-radius: 10px; cursor: pointer;
   background-size: cover; background-position: center; border: 2px solid #ffffff33;
