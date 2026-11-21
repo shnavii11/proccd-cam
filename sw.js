@@ -1,6 +1,6 @@
 // Minimal service worker: caches the app shell so ProCCD Cam installs and
 // launches offline. Bump CACHE when you change any file.
-const CACHE = 'proccd-cam-v14';
+const CACHE = 'proccd-cam-v15';
 const SHELL = [
   './', './index.html', './style.css',
   './app.js', './filter.js', './params.js', './editor.js', './stickers.js', './templates.js', './motifs.js',
